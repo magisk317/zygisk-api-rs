@@ -33,8 +33,10 @@ Maintenance work is staged as follows:
 
 1. ABI layout checks, target compilation checks, real tests, formatting and
    Clippy validation.
-2. Safe internal wrappers for unsafe FFI boundaries and consolidation of
-   repeated v1-v5 bridge code, without changing the public API.
+2. The current line includes safe internal adapters for companion fd
+   ownership, JNI descriptor pointers, PLT pointer conversion, callback
+   trampolines, module registration, and repeated v1-v5 bridge code, without
+   changing the public API.
 3. Future JNI compatibility changes are evaluated separately and must pass
    ABI, multi-target, and device validation before they are adopted.
 
