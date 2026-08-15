@@ -1,5 +1,7 @@
 use crate::raw::{ApiTableRef, ZygiskRaw};
 
+pub(crate) mod common;
+
 pub mod v1;
 pub use v1::V1;
 

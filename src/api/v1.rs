@@ -1,9 +1,8 @@
-use core::{ffi, mem, ops::Deref, ptr::NonNull};
-use std::os::{fd::FromRawFd, unix::net::UnixStream};
+use core::{ffi, ops::Deref};
+use std::os::unix::net::UnixStream;
 
 use jni::{EnvUnowned, strings::JNIStr, sys::JNINativeMethod};
 
-use crate::utils;
 use crate::{error::ZygiskError, impl_sealing::Sealed};
 
 pub use crate::raw::v1::transparent::*;
@@ -34,24 +33,23 @@ impl super::ZygiskApi<'_, V1> {
         &mut self,
         f: impl FnOnce(&mut UnixStream) -> R,
     ) -> Result<R, ZygiskError> {
-        let api_dispatch = unsafe { self.dispatch() };
-
-        match unsafe { (api_dispatch.connect_companion_fn)(api_dispatch.base.this) } {
-            -1 => Err(ZygiskError::ConnectCompanionError),
-            fd => {
-                let mut companion_sock = unsafe { UnixStream::from_raw_fd(fd) };
-                Ok(f(&mut companion_sock))
-            }
-        }
+        super::common::with_companion(
+            || unsafe {
+                let dispatch = self.dispatch();
+                (dispatch.connect_companion_fn)(dispatch.base.this)
+            },
+            f,
+        )
     }
 
     /// Set various options for your module.
     /// Check [ZygiskOption] for the full list of options available.
     #[inline(always)]
     pub fn set_option(&mut self, option: ZygiskOption) {
-        let api_dispatch = unsafe { self.dispatch() };
-
-        unsafe { (api_dispatch.set_option_fn)(api_dispatch.base.this, option) };
+        unsafe {
+            let dispatch = self.dispatch();
+            (dispatch.set_option_fn)(dispatch.base.this, option)
+        };
     }
 
     /// Hook JNI native methods for a Java class.
@@ -77,11 +75,13 @@ impl super::ZygiskApi<'_, V1> {
         let class_name = class_name.deref();
         let methods = methods.as_mut();
 
-        (unsafe { self.dispatch().hook_jni_native_methods_fn })(
+        super::common::hook_jni_native_methods_with_len(
             env,
-            class_name.as_ptr(),
-            unsafe { NonNull::new_unchecked(methods.as_mut_ptr()) },
-            methods.len() as _,
+            class_name,
+            methods,
+            |env, name, ptr, len| {
+                (unsafe { self.dispatch().hook_jni_native_methods_fn })(env, name, ptr, len)
+            },
         );
     }
 
@@ -114,23 +114,15 @@ impl super::ZygiskApi<'_, V1> {
         'b: 'a,
         S: AsRef<ffi::CStr>,
     {
-        let regex = regex.as_ref();
-        let symbol = symbol.as_ref();
-
-        // fail compilation if data and function pointer sizes don't match (not supported)
-        let _: () = utils::ShapeAssertion::<*const (), extern "C" fn()>::ASSERT;
-
-        let old_func =
-            unsafe { mem::transmute::<&'b mut *const (), &'b mut *const libc::c_void>(old_func) };
-
-        unsafe {
-            (self.dispatch().plt_hook_register_fn)(
-                regex.to_bytes_with_nul().as_ptr().cast(),
-                symbol.to_bytes_with_nul().as_ptr().cast(),
-                new_func.cast(),
-                old_func,
-            )
-        }
+        super::common::plt_hook_register_basic(
+            regex,
+            symbol,
+            new_func,
+            old_func,
+            |regex, symbol, new_func, old_func| unsafe {
+                (self.dispatch().plt_hook_register_fn)(regex, symbol, new_func, old_func)
+            },
+        )
     }
 
     /// For ELFs loaded in memory matching `regex`, exclude hooks registered for `symbol`.
@@ -140,15 +132,9 @@ impl super::ZygiskApi<'_, V1> {
     where
         S: AsRef<ffi::CStr>,
     {
-        let regex = regex.as_ref();
-        let symbol = symbol.as_ref();
-
-        unsafe {
-            (self.dispatch().plt_hook_exclude_fn)(
-                regex.to_bytes_with_nul().as_ptr().cast(),
-                symbol.to_bytes_with_nul().as_ptr().cast(),
-            )
-        }
+        super::common::plt_hook_exclude(regex, symbol, |regex, symbol| unsafe {
+            (self.dispatch().plt_hook_exclude_fn)(regex, symbol)
+        })
     }
 
     /// Commit all the hooks that was previously registered.
@@ -156,9 +142,6 @@ impl super::ZygiskApi<'_, V1> {
     /// Returns [`ZygiskError::PltHookCommitError`] if any error occurs.
     #[inline(always)]
     pub fn plt_hook_commit(&mut self) -> Result<(), ZygiskError> {
-        match unsafe { (self.dispatch().plt_hook_commit_fn)() } {
-            true => Ok(()),
-            false => Err(ZygiskError::PltHookCommitError),
-        }
+        super::common::plt_hook_commit(unsafe { (self.dispatch().plt_hook_commit_fn)() })
     }
 }

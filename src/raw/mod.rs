@@ -48,7 +48,31 @@ macro_rules! define_callback_trampolines {
     };
 }
 
-pub(crate) use define_callback_trampolines;
+macro_rules! define_module_abi {
+    ($version:ty, $module:expr, $raw_module:ty, $app_args:ty, $server_args:ty) => {{
+        define_callback_trampolines!($version, $raw_module, $app_args, $server_args);
+        ModuleAbi {
+            api_version: <$version as ZygiskRaw<'_>>::API_VERSION,
+            this: $module,
+            pre_app_specialize_fn: pre_app_specialize,
+            post_app_specialize_fn: post_app_specialize,
+            pre_server_specialize_fn: pre_server_specialize,
+            post_server_specialize_fn: post_server_specialize,
+        }
+    }};
+}
+
+pub(crate) use define_module_abi;
+
+macro_rules! forward_register_module {
+    ($table:expr) => {{
+        // SAFETY: The table comes from the active Zygisk runtime and its base
+        // prefix is present in every supported API version.
+        unsafe { &*$table.0 }.base.register_module_fn
+    }};
+}
+
+pub(crate) use forward_register_module;
 
 pub mod v1;
 pub mod v2;

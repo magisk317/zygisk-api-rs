@@ -78,27 +78,19 @@ impl<'a> ZygiskRaw<'a> for V1 {
 
     #[inline(always)]
     fn abi_from_module(module: &'a mut super::RawModule<'a, V1>) -> ModuleAbi<'a, V1> {
-        super::define_callback_trampolines!(
+        super::define_module_abi!(
             V1,
+            module,
             super::RawModule<'a, V1>,
             transparent::AppSpecializeArgs<'a>,
             transparent::ServerSpecializeArgs<'a>
-        );
-
-        ModuleAbi {
-            api_version: Self::API_VERSION,
-            this: module,
-            pre_app_specialize_fn: pre_app_specialize,
-            post_app_specialize_fn: post_app_specialize,
-            pre_server_specialize_fn: pre_server_specialize,
-            post_server_specialize_fn: post_server_specialize,
-        }
+        )
     }
 
     #[inline(always)]
     fn register_module_fn(
         table: ApiTableRef<Self>,
     ) -> unsafe extern "C" fn(ApiTableRef<Self>, ModuleAbiRef<'_, Self>) -> bool {
-        unsafe { &*table.0 }.base.register_module_fn
+        super::forward_register_module!(table)
     }
 }
