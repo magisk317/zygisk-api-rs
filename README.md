@@ -9,6 +9,37 @@
 | v4          | 25204                  | v4-0.1.0                                 | ✅           |
 | v5          | 26403                  | ~~It's supported in the latest version~~ | ✅           |
 
+## This fork
+
+This repository is an independently maintained GitLab fork of
+[`rmnscnce/zygisk-api-rs`](https://github.com/rmnscnce/zygisk-api-rs).
+
+- Maintenance repository: `https://gitlab.com/magisk3171/zygisk-api-rs`
+- Upstream baseline: `457585fa8fa32d8c394ec45ae411cc36d2711680`
+- Supported API versions remain v1 through v5.
+- Zygisk API v6 and v7 are not implemented or claimed to be supported.
+- The public API and runtime behavior are kept compatible with upstream unless a
+  change is explicitly documented and tested.
+
+The fork is intended to provide a stable dependency for MiPushZygisk and other
+Rust Zygisk modules. Dependencies are pinned by commit or release tag rather
+than tracking an unreviewed moving branch. The current JNI compatibility
+baseline is `jni 0.21`; a future `jni 0.22` migration will be evaluated
+separately because it changes JNI wrapper types and can otherwise introduce
+incompatible duplicate JNI type versions into consumers.
+
+Maintenance work is staged as follows:
+
+1. ABI layout checks, target compilation checks, real tests, formatting and
+   Clippy validation.
+2. Safe internal wrappers for unsafe FFI boundaries and consolidation of
+   repeated v1-v5 bridge code, without changing the public API.
+3. A separately validated JNI compatibility migration, if it is needed.
+
+The `upstream` remote and `upstream-sync` branch are retained for bringing in
+upstream changes. Every synchronization is reviewed against the C++ Zygisk
+headers and validated on the supported Android targets before release.
+
 
 ## References
 - Zygisk API
