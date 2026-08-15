@@ -119,3 +119,73 @@ where
         table: ApiTableRef<'a, Self>,
     ) -> for<'b> unsafe extern "C" fn(ApiTableRef<'a, Self>, ModuleAbiRef<'b, Self>) -> bool;
 }
+
+#[cfg(test)]
+mod abi_layout_tests {
+    use core::{mem, mem::offset_of};
+
+    use libc::c_long;
+
+    use super::ModuleAbi;
+    use crate::api::{V1, V2, V3, V4, V5};
+
+    macro_rules! assert_module_abi_layout {
+        ($version:ty) => {{
+            let pointer_size = mem::size_of::<*const ()>();
+            let long_size = mem::size_of::<c_long>();
+            let pointer_offset = (long_size + pointer_size - 1) & !(pointer_size - 1);
+
+            assert_eq!(offset_of!(ModuleAbi<'static, $version>, api_version), 0);
+            assert_eq!(
+                offset_of!(ModuleAbi<'static, $version>, this),
+                pointer_offset
+            );
+
+            let mut next_offset = pointer_offset + pointer_size;
+            assert_eq!(
+                offset_of!(ModuleAbi<'static, $version>, pre_app_specialize_fn),
+                next_offset
+            );
+            next_offset += pointer_size;
+            assert_eq!(
+                offset_of!(ModuleAbi<'static, $version>, post_app_specialize_fn),
+                next_offset
+            );
+            next_offset += pointer_size;
+            assert_eq!(
+                offset_of!(ModuleAbi<'static, $version>, pre_server_specialize_fn),
+                next_offset
+            );
+            next_offset += pointer_size;
+            assert_eq!(
+                offset_of!(ModuleAbi<'static, $version>, post_server_specialize_fn),
+                next_offset
+            );
+            next_offset += pointer_size;
+
+            assert_eq!(mem::size_of::<ModuleAbi<'static, $version>>(), next_offset);
+            assert_eq!(
+                mem::align_of::<ModuleAbi<'static, $version>>(),
+                pointer_size
+            );
+        }};
+    }
+
+    #[test]
+    fn module_abi_layout_is_pointer_stable_for_all_supported_versions() {
+        assert_module_abi_layout!(V1);
+        assert_module_abi_layout!(V2);
+        assert_module_abi_layout!(V3);
+        assert_module_abi_layout!(V4);
+        assert_module_abi_layout!(V5);
+    }
+
+    #[test]
+    fn api_versions_are_monotonic_and_stop_at_v5() {
+        assert_eq!(<V1 as super::ZygiskRaw<'static>>::API_VERSION, 1);
+        assert_eq!(<V2 as super::ZygiskRaw<'static>>::API_VERSION, 2);
+        assert_eq!(<V3 as super::ZygiskRaw<'static>>::API_VERSION, 3);
+        assert_eq!(<V4 as super::ZygiskRaw<'static>>::API_VERSION, 4);
+        assert_eq!(<V5 as super::ZygiskRaw<'static>>::API_VERSION, 5);
+    }
+}

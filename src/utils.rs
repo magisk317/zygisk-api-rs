@@ -5,7 +5,7 @@ impl<T, U> ShapeAssertion<T, U> {
     pub const ASSERT: () = {
         assert!(mem::size_of::<T>() == mem::size_of::<U>(), "size mismatch");
         assert!(
-            mem::align_of::<T>() % mem::align_of::<U>() == 0,
+            mem::align_of::<T>().is_multiple_of(mem::align_of::<U>()),
             "incorrect alignment"
         );
     };
