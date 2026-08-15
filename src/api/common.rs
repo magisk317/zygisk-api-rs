@@ -20,7 +20,7 @@ pub(crate) fn with_companion<R>(
     }
 }
 
-pub(crate) fn hook_jni_native_methods_with_len(
+pub(crate) fn hook_jni_native_methods(
     env: EnvUnowned,
     class_name: &JNIStr,
     methods: &mut [JNINativeMethod],
@@ -100,6 +100,13 @@ pub(crate) fn plt_hook_commit(committed: bool) -> Result<(), ZygiskError> {
         Ok(())
     } else {
         Err(ZygiskError::PltHookCommitError)
+    }
+}
+
+pub(crate) fn parse_state_flags(flags: u32) -> Result<crate::api::v2::StateFlags, ZygiskError> {
+    match crate::api::v2::StateFlags::from_bits(flags) {
+        Some(flags) => Ok(flags),
+        None => Err(ZygiskError::UnrecognizedStateFlag(flags)),
     }
 }
 

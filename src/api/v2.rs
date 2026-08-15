@@ -50,10 +50,7 @@ impl super::ZygiskApi<'_, V2> {
             (dispatch.get_flags_fn)(dispatch.base.this)
         };
 
-        match StateFlags::from_bits(flags) {
-            Some(flags) => Ok(flags),
-            None => Err(ZygiskError::UnrecognizedStateFlag(flags)),
-        }
+        super::common::parse_state_flags(flags)
     }
 
     /// # Safety
@@ -67,7 +64,7 @@ impl super::ZygiskApi<'_, V2> {
     ) {
         let class_name = class_name.deref();
         let methods = methods.as_mut();
-        super::common::hook_jni_native_methods_with_len(
+        super::common::hook_jni_native_methods(
             env,
             class_name,
             methods,

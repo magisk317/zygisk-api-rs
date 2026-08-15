@@ -75,14 +75,9 @@ impl super::ZygiskApi<'_, V1> {
         let class_name = class_name.deref();
         let methods = methods.as_mut();
 
-        super::common::hook_jni_native_methods_with_len(
-            env,
-            class_name,
-            methods,
-            |env, name, ptr, len| {
-                (unsafe { self.dispatch().hook_jni_native_methods_fn })(env, name, ptr, len)
-            },
-        );
+        super::common::hook_jni_native_methods(env, class_name, methods, |env, name, ptr, len| {
+            (unsafe { self.dispatch().hook_jni_native_methods_fn })(env, name, ptr, len)
+        });
     }
 
     /// Hook functions in the PLT (Procedure Linkage Table) of ELFs loaded in memory.
