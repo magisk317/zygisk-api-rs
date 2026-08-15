@@ -1,6 +1,6 @@
 use core::ptr::NonNull;
 
-use jni::{JNIEnv, sys::JNINativeMethod};
+use jni::{EnvUnowned, sys::JNINativeMethod};
 use libc::{c_char, c_int, c_long};
 
 use crate::api::V2;
@@ -22,8 +22,12 @@ pub(crate) mod transparent {
 pub struct ApiTable {
     pub(crate) base: BaseApi<V2>,
 
-    pub(crate) hook_jni_native_methods_fn:
-        for<'a> unsafe extern "C" fn(JNIEnv<'a>, *const c_char, NonNull<JNINativeMethod>, c_int),
+    pub(crate) hook_jni_native_methods_fn: for<'a> unsafe extern "C" fn(
+        EnvUnowned<'a>,
+        *const c_char,
+        NonNull<JNINativeMethod>,
+        c_int,
+    ),
     pub(crate) plt_hook_register_fn: unsafe extern "C" fn(
         *const c_char,
         *const c_char,

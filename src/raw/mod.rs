@@ -1,6 +1,6 @@
 use core::{marker::PhantomData, ptr::NonNull};
 
-use jni::JNIEnv;
+use jni::EnvUnowned;
 use libc::c_long;
 
 use crate::{ZygiskModule, impl_sealing::Sealed};
@@ -10,9 +10,8 @@ macro_rules! define_callback_trampolines {
         extern "C" fn pre_app_specialize<'a>(module: &mut $raw_module, args: &'a mut $app_args) {
             module.dispatch.pre_app_specialize(
                 crate::api::ZygiskApi::<$version>(module.api_table),
-                // SAFETY: Zygisk invokes this callback with the environment
-                // owned by the current specialized process.
-                unsafe { module.jni_env.unsafe_clone() },
+                // SAFETY: The stored pointer belongs to the current JNI-attached thread.
+                unsafe { EnvUnowned::from_raw(module.jni_env.as_raw()) },
                 args,
             );
         }
@@ -21,7 +20,7 @@ macro_rules! define_callback_trampolines {
             module.dispatch.post_app_specialize(
                 crate::api::ZygiskApi::<$version>(module.api_table),
                 // SAFETY: See `pre_app_specialize`.
-                unsafe { module.jni_env.unsafe_clone() },
+                unsafe { EnvUnowned::from_raw(module.jni_env.as_raw()) },
                 args,
             );
         }
@@ -33,7 +32,7 @@ macro_rules! define_callback_trampolines {
             module.dispatch.pre_server_specialize(
                 crate::api::ZygiskApi::<$version>(module.api_table),
                 // SAFETY: See `pre_app_specialize`.
-                unsafe { module.jni_env.unsafe_clone() },
+                unsafe { EnvUnowned::from_raw(module.jni_env.as_raw()) },
                 args,
             );
         }
@@ -42,7 +41,7 @@ macro_rules! define_callback_trampolines {
             module.dispatch.post_server_specialize(
                 crate::api::ZygiskApi::<$version>(module.api_table),
                 // SAFETY: See `pre_app_specialize`.
-                unsafe { module.jni_env.unsafe_clone() },
+                unsafe { EnvUnowned::from_raw(module.jni_env.as_raw()) },
                 args,
             );
         }
@@ -67,7 +66,7 @@ where
     #[doc(hidden)]
     pub api_table: ApiTableRef<'a, Version>,
     #[doc(hidden)]
-    pub jni_env: JNIEnv<'a>,
+    pub jni_env: EnvUnowned<'a>,
 }
 
 #[doc(hidden)]
