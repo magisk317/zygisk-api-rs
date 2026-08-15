@@ -24,9 +24,10 @@ This repository is an independently maintained GitLab fork of
 The fork is intended to provide a stable dependency for MiPushZygisk and other
 Rust Zygisk modules. Dependencies are pinned by commit or release tag rather
 than tracking an unreviewed moving branch. The current JNI compatibility
-baseline is `jni 0.21`; a future `jni 0.22` migration will be evaluated
-separately because it changes JNI wrapper types and can otherwise introduce
-incompatible duplicate JNI type versions into consumers.
+baseline is `jni 0.22`. Public callback and raw API boundaries use
+`EnvUnowned`; consumers that call JNI methods must explicitly upgrade it with
+`with_env`/`with_env_no_catch` to obtain `Env`. This keeps the JNI environment
+pointer FFI-safe and avoids carrying an `Env` inside the Zygisk ABI table.
 
 Maintenance work is staged as follows:
 
@@ -34,7 +35,8 @@ Maintenance work is staged as follows:
    Clippy validation.
 2. Safe internal wrappers for unsafe FFI boundaries and consolidation of
    repeated v1-v5 bridge code, without changing the public API.
-3. A separately validated JNI compatibility migration, if it is needed.
+3. Future JNI compatibility changes are evaluated separately and must pass
+   ABI, multi-target, and device validation before they are adopted.
 
 The `upstream` remote and `upstream-sync` branch are retained for bringing in
 upstream changes. Every synchronization is reviewed against the C++ Zygisk
