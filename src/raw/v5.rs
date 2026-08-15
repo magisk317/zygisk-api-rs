@@ -3,7 +3,7 @@ use core::ptr::NonNull;
 use jni::{JNIEnv, sys::JNINativeMethod};
 use libc::{c_char, c_int, c_long, dev_t, ino_t};
 
-use crate::api::{V5, ZygiskApi};
+use crate::api::V5;
 
 use super::{ApiTableRef, BaseApi, Instance, ModuleAbi, ModuleAbiRef, ZygiskRaw};
 
@@ -71,49 +71,12 @@ impl<'a> ZygiskRaw<'a> for V5 {
 
     #[inline(always)]
     fn abi_from_module(module: &'a mut super::RawModule<'a, Self>) -> ModuleAbi<'a, Self> {
-        extern "C" fn pre_app_specialize<'a>(
-            m: &mut super::RawModule<'a, V5>,
-            args: &'a mut transparent::AppSpecializeArgs<'a>,
-        ) {
-            m.dispatch.pre_app_specialize(
-                ZygiskApi::<V5>(m.api_table),
-                unsafe { m.jni_env.unsafe_clone() },
-                args,
-            );
-        }
-
-        extern "C" fn post_app_specialize<'a>(
-            m: &mut super::RawModule<'a, V5>,
-            args: &'a transparent::AppSpecializeArgs<'a>,
-        ) {
-            m.dispatch.post_app_specialize(
-                ZygiskApi::<V5>(m.api_table),
-                unsafe { m.jni_env.unsafe_clone() },
-                args,
-            );
-        }
-
-        extern "C" fn pre_server_specialize<'a>(
-            m: &mut super::RawModule<'a, V5>,
-            args: &'a mut transparent::ServerSpecializeArgs<'a>,
-        ) {
-            m.dispatch.pre_server_specialize(
-                ZygiskApi::<V5>(m.api_table),
-                unsafe { m.jni_env.unsafe_clone() },
-                args,
-            );
-        }
-
-        extern "C" fn post_server_specialize<'a>(
-            m: &mut super::RawModule<'a, V5>,
-            args: &'a transparent::ServerSpecializeArgs<'a>,
-        ) {
-            m.dispatch.post_server_specialize(
-                ZygiskApi::<V5>(m.api_table),
-                unsafe { m.jni_env.unsafe_clone() },
-                args,
-            );
-        }
+        super::define_callback_trampolines!(
+            V5,
+            super::RawModule<'a, V5>,
+            transparent::AppSpecializeArgs<'a>,
+            transparent::ServerSpecializeArgs<'a>
+        );
 
         ModuleAbi {
             api_version: Self::API_VERSION,

@@ -24,6 +24,12 @@ impl<'a, Version> ZygiskApi<'a, Version>
 where
     Version: ZygiskRaw<'a> + 'a,
 {
+    /// Returns the runtime API table represented by this handle.
+    ///
+    /// # Safety
+    ///
+    /// The handle must originate from the active Zygisk callback and its
+    /// underlying table must still be valid for `'a`.
     #[doc(hidden)]
     #[inline(always)]
     pub unsafe fn dispatch(&self) -> &<Version as ZygiskRaw<'a>>::ApiTable {

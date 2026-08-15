@@ -5,6 +5,52 @@ use libc::c_long;
 
 use crate::{ZygiskModule, impl_sealing::Sealed};
 
+macro_rules! define_callback_trampolines {
+    ($version:ty, $raw_module:ty, $app_args:ty, $server_args:ty) => {
+        extern "C" fn pre_app_specialize<'a>(module: &mut $raw_module, args: &'a mut $app_args) {
+            module.dispatch.pre_app_specialize(
+                crate::api::ZygiskApi::<$version>(module.api_table),
+                // SAFETY: Zygisk invokes this callback with the environment
+                // owned by the current specialized process.
+                unsafe { module.jni_env.unsafe_clone() },
+                args,
+            );
+        }
+
+        extern "C" fn post_app_specialize<'a>(module: &mut $raw_module, args: &'a $app_args) {
+            module.dispatch.post_app_specialize(
+                crate::api::ZygiskApi::<$version>(module.api_table),
+                // SAFETY: See `pre_app_specialize`.
+                unsafe { module.jni_env.unsafe_clone() },
+                args,
+            );
+        }
+
+        extern "C" fn pre_server_specialize<'a>(
+            module: &mut $raw_module,
+            args: &'a mut $server_args,
+        ) {
+            module.dispatch.pre_server_specialize(
+                crate::api::ZygiskApi::<$version>(module.api_table),
+                // SAFETY: See `pre_app_specialize`.
+                unsafe { module.jni_env.unsafe_clone() },
+                args,
+            );
+        }
+
+        extern "C" fn post_server_specialize<'a>(module: &mut $raw_module, args: &'a $server_args) {
+            module.dispatch.post_server_specialize(
+                crate::api::ZygiskApi::<$version>(module.api_table),
+                // SAFETY: See `pre_app_specialize`.
+                unsafe { module.jni_env.unsafe_clone() },
+                args,
+            );
+        }
+    };
+}
+
+pub(crate) use define_callback_trampolines;
+
 pub mod v1;
 pub mod v2;
 pub mod v3;
@@ -38,6 +84,13 @@ impl<'a, Version> ApiTableRef<'a, Version>
 where
     Version: ZygiskRaw<'a> + 'a,
 {
+    /// Creates a typed view over the API table supplied by Zygisk.
+    ///
+    /// # Safety
+    ///
+    /// `api_tbl` must be non-null, point to a valid table for `Version`, and
+    /// remain readable for the returned lifetime. The table must be supplied
+    /// by the active Zygisk runtime rather than an arbitrary Rust value.
     #[doc(hidden)]
     #[inline(always)]
     pub const unsafe fn from_raw(api_tbl: *const <Version as ZygiskRaw<'a>>::ApiTable) -> Self {
@@ -97,6 +150,14 @@ impl<'a, Version> ModuleAbiRef<'a, Version>
 where
     Version: ZygiskRaw<'a>,
 {
+    /// Creates the opaque ABI handle passed back to Zygisk.
+    ///
+    /// # Safety
+    ///
+    /// `module_abi` must be non-null, point to a fully initialized
+    /// [`ModuleAbi`] for `Version`, and remain valid for the returned
+    /// lifetime. The pointer must not be used after its backing storage is
+    /// released or moved.
     #[doc(hidden)]
     #[inline(always)]
     pub const unsafe fn from_raw(module_abi: *mut ModuleAbi<'a, Version>) -> Self {
