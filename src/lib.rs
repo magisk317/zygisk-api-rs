@@ -85,6 +85,8 @@ pub trait ZygiskModule {
 /// # Example
 ///
 /// ```
+/// use zygisk_api::ZygiskModule;
+///
 /// #[derive(Default)]
 /// struct MyModule;
 ///
