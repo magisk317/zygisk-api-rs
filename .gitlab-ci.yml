@@ -46,7 +46,10 @@ compile-arm:
 
 sync:github:
   stage: sync
+  needs: []
   image: alpine:latest
+  tags:
+    - magisk-arm64-linux
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_COMMIT_TAG'
