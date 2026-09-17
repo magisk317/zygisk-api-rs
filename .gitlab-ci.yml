@@ -59,7 +59,17 @@ sync:github:
   script:
     - |
       set -euo pipefail
-      git remote add github "https://magisk317:${GITHUB_PAT}@github.com/magisk317/${CI_PROJECT_NAME}.git" || true
+      # GITHUB_PAT is a group-level protected variable, so it is only injected on
+      # protected refs. Tag pipelines receive it only when the tag matches a
+      # protected tag rule (v*); otherwise fall back to a project-level
+      # GITHUB_RELEASE_TOKEN when one is configured.
+      sync_token="${GITHUB_PAT:-${GITHUB_RELEASE_TOKEN:-}}"
+      if [ -z "$sync_token" ]; then
+        echo "ERROR: neither GITHUB_PAT nor GITHUB_RELEASE_TOKEN is available on $CI_COMMIT_REF_NAME (protected=$CI_COMMIT_REF_PROTECTED)" >&2
+        echo "       Make the tag match a protected tag rule (e.g. v*) so the protected group variable is injected." >&2
+        exit 1
+      fi
+      git remote add github "https://magisk317:${sync_token}@github.com/magisk317/${CI_PROJECT_NAME}.git" || true
       if [ -n "${CI_COMMIT_TAG:-}" ]; then
         git push github "$CI_COMMIT_TAG" --force
         git push github --tags --force
