@@ -64,5 +64,5 @@ sync:github:
         git push github "$CI_COMMIT_TAG" --force
         git push github --tags --force
       else
-        git push github "$CI_COMMIT_BRANCH" --force
+        git push github "HEAD:refs/heads/$CI_COMMIT_BRANCH" --force
       fi
