@@ -1,5 +1,13 @@
 image: rust:1.98.0-trixie
 
+# Route every job to the self-hosted group runners (magisk3171 group). Shared
+# GitLab.com SaaS runners are disabled on this project, so jobs must carry a
+# tag that matches a self-hosted runner. The architecture-agnostic Rust jobs
+# run on the arm64 runner (sync:github already pins the same tag).
+default:
+  tags:
+    - magisk-arm64-linux
+
 stages:
   - verify
   - cross-compile
